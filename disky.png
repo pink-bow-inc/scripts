@@ -1,0 +1,129 @@
+#!/bin/bash
+echo "####################################"
+echo "## MAKE SURE YOUR RUNNING AS ROOT ##"
+echo "####################################"
+echo ""
+## collecting the path of the drive 
+echo disk?
+read -p "/dev/" drive
+drive="/dev/$drive"
+echo $drive
+
+# checking if its an nvme drive to add syntax 
+if [[ $drive == /dev/nvme* ]]; then
+ echo "its a nvme"
+ Psyn="p" # Psyn short for partisions syntax
+else
+ Psyn=""
+fi
+
+#unmounting all the partisions on that drive/or that drive if it is mounted
+umount $drive*
+
+## creating a new gpt sig on the drive to whipe its table
+echo "whould you like to wipe the partition data form this drive?[Y/n]"
+read input
+if [[ $input == y || -z $input ]]; then
+fdisk $drive <<CLEARING
+ g
+ w
+CLEARING
+fi
+#clear
+
+## funtions :D not required but make coding a little easyer 
+PARTgen () {
+fdisk $drive <<PART
+n
+
+
++$1
+t
+
+$2
+p
+q
+PART
+}
+
+FSgen () {
+ if [[ $1 == "fat32" ]]; then
+  mkfs.vfat -F 32 $drive$Psyn$2
+ elif [[ $1 == "swap" ]]; then
+  mkswap $drive$Psyn$2
+ elif [[ $1 == "xfs" ]]; then
+  mkfs.xfs $drive$Psyn$2
+ elif [[ $1 == "ext4"  ]]; then
+  mkfs.ext4 $drive$Psyn$2
+ fi
+}
+
+## collecting the build info and setting up the build array
+buildArray=()
+makingMode="true"
+
+while [[ $makingMode == true ]]; do  
+ echo "do you want to make a new partision [Y/n]"
+ read input
+ if [[ $input == y || -z $input ]]; then
+  ## size
+  echo "what size do you want this partision?"
+  read Psize
+  ## partision type
+  echo "############"
+  echo "size: $Psize"
+  echo "what type do you want? here are some examples and thir number codes(type the number)"
+  echo "1 aka  efi boot"
+  echo "2 aka swap"
+  echo "3 aka linux root x86_64"
+  echo "4 aka linux file system aka misc for anything else"
+  read Ptype
+  PRtype=$Ptype #saving this for print later
+  ## Partision type prossessing
+  if [[ $Ptype == 2 ]];then
+   Ptype="19"
+   Pfs="swap"
+   PMP="swap"
+  else
+  
+   if [[ $Ptype == 3 ]]; then 
+    Ptype="23"
+   elif [[$ptype == 4]]; then
+    Ptype="20"
+   fi
+
+   ## file system
+   echo "###########"
+   echo "size: $size"
+   echo "type: $PRtype"
+   echo "what file system do you want, we support: swap, xfs, fat32, ext4. at the moment"
+   read Pfs
+   ## mount point
+   echo "############"
+   echo "size: $Psize"
+   echo "type: $PRtype"
+   echo "filesystem: $Pfs"
+   echo "where do you want to mount? type swap for a swap space"
+   read PMP
+  fi ##ending auto swap sec
+  #confirming
+  echo "#########################################"
+  echo "#########################################"
+  echo "size: $Psize"
+  echo "type: $PRtype"
+  echo "filesystem: $Pfs"
+  echo "mount point: $PMP"
+  echo "confirm adding this to plan? [Y/n]"
+  read input
+  if [[ $input == y || -z $input ]]; then
+   echo "insert writing this to array"
+  fi
+ else
+  echo "ended"
+  makingMode="false"
+ fi
+done
+
+
+
+
